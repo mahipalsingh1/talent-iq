@@ -18,33 +18,32 @@ const __dirname = path.resolve();
 // ================= MIDDLEWARE =================
 app.use(express.json());
 
-// ✅🔥 FINAL CORS FIX (IMPORTANT)
+// ✅🔥 FINAL CORS (NO CRASH + WORKS WITH VERCEL)
 app.use(
   cors({
     origin: (origin, callback) => {
       const allowedOrigins = [
         "http://localhost:5173",
-        ENV.CLIENT_URL,
         "https://talent-iq-flax.vercel.app",
-        "https://talent-5kis5379d-bhanwarmahipals-9385s-projects.vercel.app"
+        "https://talent-5kis5379d-bhanwarmahipals-9385s-projects.vercel.app",
+        ENV.CLIENT_URL,
       ];
 
-      // allow tools like Postman / no-origin requests
+      // allow Postman / server-to-server requests
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
         console.log("❌ Blocked by CORS:", origin);
-        return callback(new Error("Not allowed by CORS"));
+        return callback(null, false); // ❗ IMPORTANT (no crash)
       }
     },
     credentials: true,
   })
 );
 
-// ✅ Handle preflight requests (VERY IMPORTANT)
-app.options("/*", cors());
+// ❌ REMOVED app.options("*") → causing crash in Express v5
 
 app.use(clerkMiddleware());
 
@@ -63,7 +62,8 @@ app.get("/health", (req, res) => {
 if (ENV.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-  app.get("*", (req, res) => {
+  // ✅ FIXED wildcard route (Express v5 safe)
+  app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
   });
 }

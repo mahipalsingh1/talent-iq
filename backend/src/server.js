@@ -44,7 +44,7 @@ app.use(
 );
 
 // ✅ Handle preflight requests (VERY IMPORTANT)
-app.options("*", cors());
+app.options("/*", cors());
 
 app.use(clerkMiddleware());
 

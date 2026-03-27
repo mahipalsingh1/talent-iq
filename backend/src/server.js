@@ -54,7 +54,7 @@ app.use("/api/sessions", sessionRoutes);
 app.use("/api/code", codeRoutes);
 
 // ================= HEALTH CHECK =================
-app.get("/health", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.status(200).json({ msg: "API is running 🚀" });
 });
 

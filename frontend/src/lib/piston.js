@@ -1,6 +1,6 @@
 // 🚀 Backend proxy execution (FINAL FIXED)
 
-const BACKEND_API = import.meta.env.VITE_API_URL;
+const BACKEND_API = "http://localhost:3000/api/code";
 
 const LANGUAGE_VERSIONS = {
   javascript: { language: "javascript", version: "18.15.0" },
@@ -20,7 +20,7 @@ export async function executeCode(language, code, problemId) {
       };
     }
 
-    const response = await fetch(`${BACKEND_API}/code/run`, {
+    const response = await fetch(`${BACKEND_API}/run`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

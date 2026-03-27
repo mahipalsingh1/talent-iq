@@ -13,73 +13,39 @@ import sessionRoutes from "./routes/sessionRoute.js";
 import codeRoutes from "./routes/codeRoutes.js";
 
 const app = express();
+
 const __dirname = path.resolve();
 
-// ================= MIDDLEWARE =================
+// middleware
 app.use(express.json());
+// credentials:true meaning?? => server allows a browser to include cookies on request
+app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
+app.use(clerkMiddleware()); // this adds auth field to request object: req.auth()
 
-// ✅🔥 FINAL CORS (NO CRASH + WORKS WITH VERCEL)
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "https://talent-iq-flax.vercel.app",
-        "https://talent-5kis5379d-bhanwarmahipals-9385s-projects.vercel.app",
-        ENV.CLIENT_URL,
-      ];
-
-      // allow Postman / server-to-server requests
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.log("❌ Blocked by CORS:", origin);
-        return callback(null, false); // ❗ IMPORTANT (no crash)
-      }
-    },
-    credentials: true,
-  })
-);
-
-// ❌ REMOVED app.options("*") → causing crash in Express v5
-
-app.use(clerkMiddleware());
-
-// ================= ROUTES =================
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/chat", chatRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/code", codeRoutes);
 
-// ================= HEALTH CHECK =================
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ msg: "API is running 🚀" });
+app.get("/health", (req, res) => {
+  res.status(200).json({ msg: "api is up and running" });
 });
 
-// ================= PRODUCTION =================
+// make our app ready for deployment
 if (ENV.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-  // ✅ FIXED wildcard route (Express v5 safe)
-  app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+  app.get("/{*any}", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
   });
 }
 
-// ================= START SERVER =================
 const startServer = async () => {
   try {
     await connectDB();
-
-    const PORT = ENV.PORT || 3000;
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port: ${PORT}`);
-    });
+    app.listen(ENV.PORT, () => console.log("Server is running on port:", ENV.PORT));
   } catch (error) {
-    console.error("💥 Error starting server:", error);
+    console.error("💥 Error starting the server", error);
   }
 };
 

@@ -1,6 +1,6 @@
 import express from "express";
-import cors from "cors";
 import path from "path";
+import cors from "cors";
 import { serve } from "inngest/express";
 import { clerkMiddleware } from "@clerk/express";
 
@@ -15,50 +15,51 @@ import codeRoutes from "./routes/codeRoutes.js";
 const app = express();
 const __dirname = path.resolve();
 
-// ================== MIDDLEWARE ==================
+// ================= MIDDLEWARE =================
 app.use(express.json());
 
-// ✅ PROPER CORS FIX (VERY IMPORTANT)
+// ✅🔥 FINAL CORS FIX (IMPORTANT)
 app.use(
   cors({
     origin: (origin, callback) => {
       const allowedOrigins = [
         "http://localhost:5173",
-        "https://talent-iq-flax.vercel.app", // 🔥 your deployed frontend
+        ENV.CLIENT_URL,
+        "https://talent-iq-flax.vercel.app",
+        "https://talent-5kis5379d-bhanwarmahipals-9385s-projects.vercel.app"
       ];
 
-      // allow requests with no origin (like Postman)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
+      // allow tools like Postman / no-origin requests
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       } else {
-        callback(new Error("CORS not allowed"));
+        console.log("❌ Blocked by CORS:", origin);
+        return callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
   })
 );
 
+// ✅ Handle preflight requests (VERY IMPORTANT)
+app.options("*", cors());
+
 app.use(clerkMiddleware());
 
-// ================== ROUTES ==================
+// ================= ROUTES =================
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/chat", chatRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/code", codeRoutes);
 
-// ================== HEALTH ==================
+// ================= HEALTH CHECK =================
 app.get("/health", (req, res) => {
   res.status(200).json({ msg: "API is running 🚀" });
 });
 
-// ================== ROOT FIX ==================
-// ❗ prevents 404 confusion on "/"
-app.get("/", (req, res) => {
-  res.send("Backend is running 🚀 Use /api routes");
-});
-
-// ================== PRODUCTION STATIC ==================
-// ⚠️ OPTIONAL (only if hosting frontend from backend)
+// ================= PRODUCTION =================
 if (ENV.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
@@ -67,7 +68,7 @@ if (ENV.NODE_ENV === "production") {
   });
 }
 
-// ================== START SERVER ==================
+// ================= START SERVER =================
 const startServer = async () => {
   try {
     await connectDB();
@@ -75,7 +76,7 @@ const startServer = async () => {
     const PORT = ENV.PORT || 3000;
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🚀 Server running on port: ${PORT}`);
     });
   } catch (error) {
     console.error("💥 Error starting server:", error);

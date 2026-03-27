@@ -1,8 +1,15 @@
 import axios from "axios";
 
+const BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true, // by adding this field browser will send the cookies to server automatically, on every single req
+  baseURL: BASE_URL,
+  withCredentials: true,
+  timeout: 10000, // prevent hanging requests
 });
+
+// 🔍 Debug (optional)
+console.log("API URL:", BASE_URL);
 
 export default axiosInstance;

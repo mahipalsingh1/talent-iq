@@ -20,7 +20,7 @@ export async function executeCode(language, code, problemId) {
       };
     }
 
-    const response = await fetch(`${BACKEND_API}/run`, {
+    const response = await fetch(`${BACKEND_API}/code/run`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

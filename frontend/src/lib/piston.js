@@ -1,6 +1,6 @@
 // 🚀 Backend proxy execution (FINAL FIXED)
 
-const BACKEND_API = "http://localhost:3000/api/code";
+const BACKEND_API = "https://mahis-talent-iq.onrender.com/api/code";
 
 const LANGUAGE_VERSIONS = {
   javascript: { language: "javascript", version: "18.15.0" },

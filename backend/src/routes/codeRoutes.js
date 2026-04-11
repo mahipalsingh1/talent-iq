@@ -11,12 +11,30 @@ router.post("/run", async (req, res) => {
   try {
     const { language, code, problemId } = req.body;
 
+    console.log("🔥 BACKEND RECEIVED:", {
+      language,
+      problemId,
+      code: code?.slice(0, 50),
+    });
+
+    // ✅ VALIDATION
+    if (!language || !code || !problemId) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields",
+      });
+    }
+
     const problem = PROBLEMS[problemId];
 
     if (!problem) {
-      return res.status(400).json({ error: "Invalid problemId" });
+      return res.status(400).json({
+        success: false,
+        error: "Invalid problemId",
+      });
     }
 
+    // ✅ LANGUAGE MAP
     const langMap = {
       javascript: "nodejs",
       python: "python3",
@@ -25,37 +43,64 @@ router.post("/run", async (req, res) => {
 
     const jdoodleLang = langMap[language] || "nodejs";
 
-    // 🔥 Detect console.log
-    const hasConsoleLog = /console\.log\s*\(/.test(code);
+    // ✅ Detect console.log / print
+    const hasConsoleLog =
+      /console\.log\s*\(/.test(code) || /print\s*\(/.test(code);
 
     let wrappedCode = code;
 
-    // 🔥 Auto-run test cases ONLY if no console.log
-    if (!hasConsoleLog) {
+    // ✅ FUNCTION NAME DETECTION
+    let functionName = "solution";
+
+    if (problemId === "two-sum") functionName = "twoSum";
+    else if (problemId === "reverse-string") functionName = "reverseString";
+    else if (problemId === "valid-palindrome") functionName = "isPalindrome";
+    else if (problemId === "maximum-subarray") functionName = "maxSubArray";
+    else if (problemId === "container-with-most-water") functionName = "maxArea";
+
+    // ✅ GET TEST INPUTS (dynamic per problem)
+    const testInputs = problem.testInputs?.[language] || [];
+
+    // ✅ AUTO TEST RUN (LANGUAGE SAFE)
+    if (!hasConsoleLog && testInputs.length > 0) {
       wrappedCode += "\n";
 
-      problem.examples.forEach((example) => {
-        if (problem.id === "reverse-string") {
-          const arr = example.input.match(/\[(.*)\]/)[0];
+      testInputs.forEach((input) => {
+        // ✅ JAVASCRIPT
+        if (language === "javascript") {
           wrappedCode += `
-let temp = ${arr};
-${problem.starterCode.javascript.includes("reverseString") ? "reverseString" : problem.functionName}(temp);
-console.log(JSON.stringify(temp));
+try {
+  const result = ${functionName}(${input});
+  console.log(result);
+} catch (e) {
+  console.log("ERROR:", e.message);
+}
 `;
-        } else {
-          // extract function call from example input
-          const call = example.input
-            .replace(/.*=/, "")
-            .trim()
-            .replace(/;/g, "");
+        }
 
+        // ✅ PYTHON (FIXED)
+        else if (language === "python") {
           wrappedCode += `
-console.log(JSON.stringify(${problem.id === "two-sum" ? "twoSum" : "solution"}(${call})));
+try:
+    result = ${functionName}(${input})
+    print(result)
+except Exception as e:
+    print("ERROR:", e)
+`;
+        }
+
+        // ✅ JAVA (basic fallback)
+        else if (language === "java") {
+          wrappedCode += `
+// Java execution requires full class structure
 `;
         }
       });
     }
 
+    console.log("🧠 FINAL CODE:\n", wrappedCode);
+
+    // ✅ JDoodle API CALL
     const response = await fetch("https://api.jdoodle.com/v1/execute", {
       method: "POST",
       headers: {
@@ -72,20 +117,28 @@ console.log(JSON.stringify(${problem.id === "two-sum" ? "twoSum" : "solution"}($
 
     const data = await response.json();
 
+    if (!data) {
+      return res.status(500).json({
+        success: false,
+        error: "JDoodle failed",
+      });
+    }
+
     const output = data.output || "";
 
-    // 🔥 Dynamic expected output
-    const expectedOutput = problem.expectedOutput[language];
+    console.log("📤 OUTPUT:", output);
 
-    const lines = output
-      .trim()
-      .split("\n")
-      .map((line) => line.replace(/\s+/g, ""));
+    // ✅ EXPECTED OUTPUT MATCHING
+    const expectedOutput = problem.expectedOutput?.[language] || "";
 
-    const expectedLines = expectedOutput
-      .trim()
-      .split("\n")
-      .map((line) => line.replace(/\s+/g, ""));
+    const normalize = (text) =>
+      text
+        .trim()
+        .split("\n")
+        .map((line) => line.replace(/\s+/g, ""));
+
+    const lines = normalize(output);
+    const expectedLines = normalize(expectedOutput);
 
     const passed =
       lines.length === expectedLines.length &&
@@ -98,7 +151,8 @@ console.log(JSON.stringify(${problem.id === "two-sum" ? "twoSum" : "solution"}($
     });
 
   } catch (error) {
-    console.error("ERROR:", error);
+    console.error("🔥 ERROR:", error);
+
     res.status(500).json({
       success: false,
       error: error.message,

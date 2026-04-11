@@ -38,9 +38,11 @@ function SessionPage() {
     isParticipant
   );
 
-  // find the problem data based on session problem title
+  // ✅ FIX: robust matching (avoids null problemData)
   const problemData = session?.problem
-    ? Object.values(PROBLEMS).find((p) => p.title === session.problem)
+    ? Object.values(PROBLEMS).find(
+        (p) => p.title.trim().toLowerCase() === session.problem.trim().toLowerCase()
+      )
     : null;
 
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
@@ -52,8 +54,6 @@ function SessionPage() {
     if (isHost || isParticipant) return;
 
     joinSessionMutation.mutate(id, { onSuccess: refetch });
-
-    // remove the joinSessionMutation, refetch from dependencies to avoid infinite loop
   }, [session, user, loadingSession, isHost, isParticipant, id]);
 
   // redirect the "participant" when session ends
@@ -73,24 +73,41 @@ function SessionPage() {
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
     setSelectedLanguage(newLang);
-    // use problem-specific starter code
     const starterCode = problemData?.starterCode?.[newLang] || "";
     setCode(starterCode);
     setOutput(null);
   };
 
+  // ✅🔥 FINAL FIX (MAIN BUG)
   const handleRunCode = async () => {
+    if (!problemData?.id) {
+      console.error("❌ ProblemId missing", {
+        sessionProblem: session?.problem,
+        problemData,
+      });
+      return;
+    }
+
     setIsRunning(true);
     setOutput(null);
 
-    const result = await executeCode(selectedLanguage, code);
+    console.log("🚀 FINAL SEND:", {
+      language: selectedLanguage,
+      problemId: problemData.id,
+    });
+
+    const result = await executeCode(
+      selectedLanguage,
+      code,
+      problemData.id // ✅ FIXED
+    );
+
     setOutput(result);
     setIsRunning(false);
   };
 
   const handleEndSession = () => {
     if (confirm("Are you sure you want to end this session? All participants will be notified.")) {
-      // this will navigate the HOST to dashboard
       endSessionMutation.mutate(id, { onSuccess: () => navigate("/dashboard") });
     }
   };
@@ -129,9 +146,12 @@ function SessionPage() {
                             session?.difficulty
                           )}`}
                         >
-                          {session?.difficulty.slice(0, 1).toUpperCase() +
-                            session?.difficulty.slice(1) || "Easy"}
+                          {session?.difficulty
+                            ? session.difficulty.charAt(0).toUpperCase() +
+                              session.difficulty.slice(1)
+                            : "Easy"}
                         </span>
+
                         {isHost && session?.status === "active" && (
                           <button
                             onClick={handleEndSession}
@@ -146,6 +166,7 @@ function SessionPage() {
                             End Session
                           </button>
                         )}
+
                         {session?.status === "completed" && (
                           <span className="badge badge-ghost badge-lg">Completed</span>
                         )}
@@ -239,6 +260,7 @@ function SessionPage() {
                       onLanguageChange={handleLanguageChange}
                       onCodeChange={(value) => setCode(value)}
                       onRunCode={handleRunCode}
+                      currentProblem={problemData} // ✅ important
                     />
                   </Panel>
 
@@ -254,36 +276,24 @@ function SessionPage() {
 
           <PanelResizeHandle className="w-2 bg-base-300 hover:bg-primary transition-colors cursor-col-resize" />
 
-          {/* RIGHT PANEL - VIDEO CALLS & CHAT */}
+          {/* RIGHT PANEL */}
           <Panel defaultSize={50} minSize={30}>
             <div className="h-full bg-base-200 p-4 overflow-auto">
               {isInitializingCall ? (
                 <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Loader2Icon className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
-                    <p className="text-lg">Connecting to video call...</p>
-                  </div>
+                  <Loader2Icon className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
+                  <p className="text-lg">Connecting to video call...</p>
                 </div>
               ) : !streamClient || !call ? (
                 <div className="h-full flex items-center justify-center">
-                  <div className="card bg-base-100 shadow-xl max-w-md">
-                    <div className="card-body items-center text-center">
-                      <div className="w-24 h-24 bg-error/10 rounded-full flex items-center justify-center mb-4">
-                        <PhoneOffIcon className="w-12 h-12 text-error" />
-                      </div>
-                      <h2 className="card-title text-2xl">Connection Failed</h2>
-                      <p className="text-base-content/70">Unable to connect to the video call</p>
-                    </div>
-                  </div>
+                  <PhoneOffIcon className="w-12 h-12 text-error" />
                 </div>
               ) : (
-                <div className="h-full">
-                  <StreamVideo client={streamClient}>
-                    <StreamCall call={call}>
-                      <VideoCallUI chatClient={chatClient} channel={channel} />
-                    </StreamCall>
-                  </StreamVideo>
-                </div>
+                <StreamVideo client={streamClient}>
+                  <StreamCall call={call}>
+                    <VideoCallUI chatClient={chatClient} channel={channel} />
+                  </StreamCall>
+                </StreamVideo>
               )}
             </div>
           </Panel>

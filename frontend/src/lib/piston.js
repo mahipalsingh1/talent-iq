@@ -1,6 +1,7 @@
 // 🚀 Backend proxy execution (FINAL FIXED)
 
-const BACKEND_API = "https://talent-iq-production-8437.up.railway.app/api/code";
+// ✅ use ENV instead of hardcoded
+const BACKEND_API = import.meta.env.VITE_API_URL + "/api/code";
 
 const LANGUAGE_VERSIONS = {
   javascript: { language: "javascript", version: "18.15.0" },
@@ -8,8 +9,8 @@ const LANGUAGE_VERSIONS = {
   java: { language: "java", version: "15.0.2" },
 };
 
-// ✅ ADD problemId parameter
-export async function executeCode(language, code, problemId) {
+// ✅ ADD token parameter
+export async function executeCode(language, code, problemId, token) {
   try {
     const languageConfig = LANGUAGE_VERSIONS[language];
 
@@ -24,11 +25,12 @@ export async function executeCode(language, code, problemId) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`, // ✅ FIX
       },
       body: JSON.stringify({
         language: languageConfig.language,
         code: code,
-        problemId: problemId, // 🔥 IMPORTANT FIX
+        problemId: problemId,
       }),
     });
 
@@ -47,9 +49,10 @@ export async function executeCode(language, code, problemId) {
     console.log("BACKEND RESPONSE:", data);
 
     return {
-      success: data.passed,
+      success: data.success, // ✅ FIX (not passed)
       output: data.output || "No output",
-      error: data.passed ? null : "Tests failed",
+      error: data.success ? null : "Execution failed",
+      passed: data.passed, // optional
     };
 
   } catch (error) {

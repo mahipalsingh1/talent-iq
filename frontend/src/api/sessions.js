@@ -1,50 +1,36 @@
 import axiosInstance from "../lib/axios";
-import { getToken } from "@clerk/clerk-react";
 
+// ✅ token parameter pass करेंगे (important)
 export const sessionApi = {
-  createSession: async (data) => {
-    const token = await getToken();
-
+  createSession: async (data, token) => {
     const response = await axiosInstance.post("/sessions", data, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
     return response.data;
   },
 
-  getActiveSessions: async () => {
-    const token = await getToken();
-
+  getActiveSessions: async (token) => {
     const response = await axiosInstance.get("/sessions/active", {
       headers: { Authorization: `Bearer ${token}` },
     });
-
     return response.data;
   },
 
-  getMyRecentSessions: async () => {
-    const token = await getToken();
-
+  getMyRecentSessions: async (token) => {
     const response = await axiosInstance.get("/sessions/my-recent", {
       headers: { Authorization: `Bearer ${token}` },
     });
-
     return response.data;
   },
 
-  getSessionById: async (id) => {
-    const token = await getToken();
-
+  getSessionById: async (id, token) => {
     const response = await axiosInstance.get(`/sessions/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
     return response.data;
   },
 
-  joinSession: async (id) => {
-    const token = await getToken();
-
+  joinSession: async (id, token) => {
     const response = await axiosInstance.post(
       `/sessions/${id}/join`,
       {},
@@ -52,13 +38,10 @@ export const sessionApi = {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
-
     return response.data;
   },
 
-  endSession: async (id) => {
-    const token = await getToken();
-
+  endSession: async (id, token) => {
     const response = await axiosInstance.post(
       `/sessions/${id}/end`,
       {},
@@ -66,17 +49,13 @@ export const sessionApi = {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
-
     return response.data;
   },
 
-  getStreamToken: async () => {
-    const token = await getToken();
-
+  getStreamToken: async (token) => {
     const response = await axiosInstance.get(`/chat/token`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
     return response.data;
   },
 };

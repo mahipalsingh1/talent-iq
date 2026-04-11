@@ -80,32 +80,34 @@ function SessionPage() {
 
   // ✅🔥 FINAL FIX (MAIN BUG)
   const handleRunCode = async () => {
-    if (!problemData?.id) {
-      console.error("❌ ProblemId missing", {
-        sessionProblem: session?.problem,
-        problemData,
-      });
-      return;
-    }
-
-    setIsRunning(true);
-    setOutput(null);
-
-    console.log("🚀 FINAL SEND:", {
-      language: selectedLanguage,
-      problemId: problemData.id,
+  if (!problemData?.id) {
+    console.error("❌ ProblemId missing", {
+      sessionProblem: session?.problem,
+      problemData,
     });
+    return;
+  }
+
+  setIsRunning(true);
+  setOutput(null);
+
+  try {
+    const token = await getToken(); // ✅ ADD
 
     const result = await executeCode(
       selectedLanguage,
       code,
-      problemData.id // ✅ FIXED
+      problemData.id,
+      token // ✅ PASS TOKEN
     );
 
     setOutput(result);
+  } catch (error) {
+    console.error("Execution failed:", error);
+  } finally {
     setIsRunning(false);
-  };
-
+  }
+};
   const handleEndSession = () => {
     if (confirm("Are you sure you want to end this session? All participants will be notified.")) {
       endSessionMutation.mutate(id, { onSuccess: () => navigate("/dashboard") });

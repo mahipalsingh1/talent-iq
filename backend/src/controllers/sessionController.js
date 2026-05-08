@@ -1,4 +1,4 @@
-import { chatClient, streamClient } from "../lib/stream.js";
+import { chatClient, streamClient, upsertStreamUser } from "../lib/stream.js";
 import Session from "../models/Session.js";
 
 export async function createSession(req, res) {
@@ -10,6 +10,14 @@ export async function createSession(req, res) {
     if (!problem || !difficulty) {
       return res.status(400).json({ message: "Problem and difficulty are required" });
     }
+
+    // ensure user exists in Stream before creating call/channel
+    // (handles case where Inngest sync hasn't happened yet)
+    await upsertStreamUser({
+      id: clerkId,
+      name: req.user.name,
+      image: req.user.profileImage,
+    });
 
     // generate a unique call id for stream video
     const callId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;

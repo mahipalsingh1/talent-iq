@@ -1,7 +1,6 @@
 // 🚀 Backend proxy execution (FINAL FIXED)
 
-// ✅ use ENV instead of hardcoded
-const BACKEND_API = import.meta.env.VITE_API_URL + "/api/code";
+const BACKEND_API = `${import.meta.env.VITE_API_URL}/code`;
 
 const LANGUAGE_VERSIONS = {
   javascript: { language: "javascript", version: "18.15.0" },
@@ -9,8 +8,8 @@ const LANGUAGE_VERSIONS = {
   java: { language: "java", version: "15.0.2" },
 };
 
-// ✅ ADD token parameter
-export async function executeCode(language, code, problemId, token) {
+// ✅ ADD problemId parameter
+export async function executeCode(language, code, problemId) {
   try {
     const languageConfig = LANGUAGE_VERSIONS[language];
 
@@ -25,12 +24,11 @@ export async function executeCode(language, code, problemId, token) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`, // ✅ FIX
       },
       body: JSON.stringify({
         language: languageConfig.language,
         code: code,
-        problemId: problemId,
+        problemId: problemId, // 🔥 IMPORTANT FIX
       }),
     });
 
@@ -49,10 +47,9 @@ export async function executeCode(language, code, problemId, token) {
     console.log("BACKEND RESPONSE:", data);
 
     return {
-      success: data.success, // ✅ FIX (not passed)
+      success: data.passed,
       output: data.output || "No output",
-      error: data.success ? null : "Execution failed",
-      passed: data.passed, // optional
+      error: data.passed ? null : "Tests failed",
     };
 
   } catch (error) {
